@@ -35,9 +35,7 @@ if TYPE_CHECKING:
         data: List[List[str | int | bool]]
 
 def predict(current_model, *args):
-    iter = current_model.predict(*args)
-    for i in iter:
-        yield i
+    yield from current_model.predict(*args)
 
 def billing_info(current_model):
     return current_model.billing_info()
@@ -55,9 +53,7 @@ def reset(current_model, *args):
     return current_model.reset(*args)
 
 def retry(current_model, *args):
-    iter = current_model.retry(*args)
-    for i in iter:
-        yield i
+    yield from current_model.retry(*args)
 
 def delete_first_conversation(current_model, *args):
     return current_model.delete_first_conversation(*args)
@@ -129,8 +125,7 @@ def dislike(current_model, *args):
 def count_token(message):
     encoding = tiktoken.get_encoding("cl100k_base")
     input_str = f"role: {message['role']}, content: {message['content']}"
-    length = len(encoding.encode(input_str))
-    return length
+    return len(encoding.encode(input_str))
 
 
 def markdown_to_html_with_syntax_highlight(md_str):
@@ -213,19 +208,13 @@ def convert_asis(userinput):
 
 def detect_converted_mark(userinput):
     try:
-        if userinput.endswith(ALREADY_CONVERTED_MARK):
-            return True
-        else:
-            return False
+        return bool(userinput.endswith(ALREADY_CONVERTED_MARK))
     except:
         return True
 
 
 def detect_language(code):
-    if code.startswith("\n"):
-        first_line = ""
-    else:
-        first_line = code.strip().split("\n", 1)[0]
+    first_line = "" if code.startswith("\n") else code.strip().split("\n", 1)[0]
     language = first_line.lower() if first_line else ""
     code_without_language = code[len(first_line) :].lstrip() if first_line else code
     return language, code_without_language
@@ -284,10 +273,7 @@ def get_file_names(dir, plain=False, filetypes=[".json"]):
     if files == []:
         files = [""]
     logging.debug(f"files are:{files}")
-    if plain:
-        return files
-    else:
-        return gr.Dropdown.update(choices=files)
+    return files if plain else gr.Dropdown.update(choices=files)
 
 
 def get_history_names(plain=False, user_name=""):
@@ -367,11 +353,10 @@ def hide_middle_chars(s):
         return ""
     if len(s) <= 8:
         return s
-    else:
-        head = s[:4]
-        tail = s[-4:]
-        hidden = "*" * (len(s) - 8)
-        return head + hidden + tail
+    head = s[:4]
+    tail = s[-4:]
+    hidden = "*" * (len(s) - 8)
+    return head + hidden + tail
 
 
 def submit_key(key):
@@ -382,7 +367,7 @@ def submit_key(key):
 
 
 def replace_today(prompt):
-    today = datetime.datetime.today().strftime("%Y-%m-%d")
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
     return prompt.replace("{current_date}", today)
 
 
@@ -393,7 +378,7 @@ def get_geoip():
         data = response.json()
     except:
         data = {"error": True, "reason": "连接ipapi失败"}
-    if "error" in data.keys():
+    if "error" in data:
         logging.warning(f"无法获取IP地址信息。\n{data}")
         if data["reason"] == "RateLimited":
             return (
@@ -479,13 +464,13 @@ def run(command, desc=None, errdesc=None, custom_env=None, live=False):
 
 def versions_html():
     git = os.environ.get('GIT', "git")
-    python_version = ".".join([str(x) for x in sys.version_info[0:3]])
+    python_version = ".".join([str(x) for x in sys.version_info[:3]])
     try:
         commit_hash = run(f"{git} rev-parse HEAD").strip()
     except Exception:
         commit_hash = "<none>"
     if commit_hash != "<none>":
-        short_commit = commit_hash[0:7]
+        short_commit = commit_hash[:7]
         commit_info = f"<a style=\"text-decoration:none;color:inherit\" href=\"https://github.com/GaiZhenbiao/ChuanhuChatGPT/commit/{short_commit}\">{short_commit}</a>"
     else:
         commit_info = "unknown \U0001F615"
@@ -505,7 +490,7 @@ def add_source_numbers(lst, source_name = "Source", use_source = True):
 
 def add_details(lst):
     nodes = []
-    for index, txt in enumerate(lst):
+    for txt in lst:
         brief = txt[:25].replace("\n", "")
         nodes.append(
             f"<details><summary>{brief}...</summary><p>{txt}</p></details>"
@@ -516,11 +501,8 @@ def add_details(lst):
 def sheet_to_string(sheet, sheet_name = None):
     result = []
     for index, row in sheet.iterrows():
-        row_string = ""
-        for column in sheet.columns:
-            row_string += f"{column}: {row[column]}, "
-        row_string = row_string.rstrip(", ")
-        row_string += "."
+        row_string = "".join(f"{column}: {row[column]}, " for column in sheet.columns)
+        row_string = row_string.rstrip(", ") + "."
         result.append(row_string)
     return result
 
@@ -561,8 +543,7 @@ def toggle_like_btn_visibility(selected_model_name):
         return gr.update(visible=False)
 
 def new_auto_history_filename(dirname):
-    latest_file = get_latest_filepath(dirname)
-    if latest_file:
+    if latest_file := get_latest_filepath(dirname):
         with open(os.path.join(dirname, latest_file), 'r') as f:
             if len(f.read()) == 0:
                 return latest_file
@@ -576,7 +557,7 @@ def get_latest_filepath(dirname):
     for filename in os.listdir(dirname):
         if os.path.isfile(os.path.join(dirname, filename)):
             match = pattern.search(filename)
-            if match and match.group(0) == filename[:19]:
+            if match and match[0] == filename[:19]:
                 time_str = filename[:19]
                 filetime = datetime.datetime.strptime(time_str, '%Y-%m-%d_%H-%M-%S')
                 if not latest_time or filetime > latest_time:

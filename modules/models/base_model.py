@@ -134,26 +134,25 @@ class ModelType(Enum):
         model_type = None
         model_name_lower = model_name.lower()
         if "gpt" in model_name_lower:
-            model_type = ModelType.OpenAI
+            return ModelType.OpenAI
         elif "chatglm" in model_name_lower:
-            model_type = ModelType.ChatGLM
+            return ModelType.ChatGLM
         elif "llama" in model_name_lower or "alpaca" in model_name_lower:
-            model_type = ModelType.LLaMA
+            return ModelType.LLaMA
         elif "xmchat" in model_name_lower:
-            model_type = ModelType.XMChat
+            return ModelType.XMChat
         elif "stablelm" in model_name_lower:
-            model_type = ModelType.StableLM
+            return ModelType.StableLM
         elif "moss" in model_name_lower:
-            model_type = ModelType.MOSS
+            return ModelType.MOSS
         elif "yuanai" in model_name_lower:
-            model_type = ModelType.YuanAI
+            return ModelType.YuanAI
         elif "minimax" in model_name_lower:
-            model_type = ModelType.Minimax
+            return ModelType.Minimax
         elif "川虎助理" in model_name_lower:
-            model_type = ModelType.ChuanhuAgent
+            return ModelType.ChuanhuAgent
         else:
-            model_type = ModelType.Unknown
-        return model_type
+            return ModelType.Unknown
 
 
 class BaseLLMModel:
@@ -245,7 +244,7 @@ class BaseLLMModel:
         stream_iter = self.get_answer_stream_iter()
 
         if display_append:
-            display_append = "<hr>" +display_append
+            display_append = f"<hr>{display_append}"
         for partial_text in stream_iter:
             chatbot[-1] = (chatbot[-1][0], partial_text + display_append)
             self.all_token_counts[-1] += 1
@@ -336,7 +335,7 @@ class BaseLLMModel:
             )
         elif use_websearch:
             limited_context = True
-            search_results = [i for i in search(real_inputs, advanced=True)]
+            search_results = list(search(real_inputs, advanced=True))
             reference_results = []
             for idx, result in enumerate(search_results):
                 logging.debug(f"搜索结果{idx + 1}：{result}")
@@ -369,10 +368,10 @@ class BaseLLMModel:
         should_check_token_count=True,
     ):  # repetition_penalty, top_k
 
-        status_text = "开始生成回答……"
         logging.info(
-            "输入为：" + colorama.Fore.BLUE + f"{inputs}" + colorama.Style.RESET_ALL
+            f"输入为：{colorama.Fore.BLUE}" + f"{inputs}" + colorama.Style.RESET_ALL
         )
+        status_text = "开始生成回答……"
         if should_check_token_count:
             yield chatbot + [(inputs, "")], status_text
         if reply_language == "跟随问题语言（不稳定）":
@@ -411,14 +410,12 @@ class BaseLLMModel:
         try:
             if stream:
                 logging.debug("使用流式传输")
-                iter = self.stream_next_chatbot(
+                yield from self.stream_next_chatbot(
                     inputs,
                     chatbot,
                     fake_input=fake_inputs,
                     display_append=display_append,
                 )
-                for chatbot, status_text in iter:
-                    yield chatbot, status_text
             else:
                 logging.debug("不使用流式传输")
                 chatbot, status_text = self.next_chatbot_at_once(
@@ -435,8 +432,7 @@ class BaseLLMModel:
 
         if len(self.history) > 1 and self.history[-1]["content"] != inputs:
             logging.info(
-                "回答为："
-                + colorama.Fore.BLUE
+                f"回答为：{colorama.Fore.BLUE}"
                 + f"{self.history[-1]['content']}"
                 + colorama.Style.RESET_ALL
             )
@@ -484,7 +480,7 @@ class BaseLLMModel:
             yield chatbot, f"{STANDARD_ERROR_MSG}上下文是空的"
             return
 
-        iter = self.predict(
+        yield from self.predict(
             inputs,
             chatbot,
             stream=stream,
@@ -492,8 +488,6 @@ class BaseLLMModel:
             files=files,
             reply_language=reply_language,
         )
-        for x in iter:
-            yield x
         logging.debug("重试完毕")
 
     # def reduce_token_size(self, chatbot):
@@ -604,9 +598,7 @@ class BaseLLMModel:
     def token_message(self, token_lst=None):
         if token_lst is None:
             token_lst = self.all_token_counts
-        token_sum = 0
-        for i in range(len(token_lst)):
-            token_sum += sum(token_lst[: i + 1])
+        token_sum = sum(sum(token_lst[: i + 1]) for i in range(len(token_lst)))
         return i18n("Token 计数: ") + f"{sum(token_lst)}" + i18n("，本次对话累计消耗了 ") + f"{token_sum} tokens"
 
     def save_chat_history(self, filename, chatbot, user_name):

@@ -149,9 +149,7 @@ class ChuanhuAgent_Client(BaseLLMModel):
         if text == "":
             return "URL unavailable."
         text_summary = self.summary(text)
-        url_content = "webpage content summary:\n" + text_summary
-
-        return url_content
+        return "webpage content summary:\n" + text_summary
 
     def ask_url(self, url, question):
         text = self.fetch_url_content(url)

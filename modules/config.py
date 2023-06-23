@@ -82,18 +82,14 @@ os.environ["MINIMAX_API_KEY"] = minimax_api_key
 minimax_group_id = config.get("minimax_group_id", "")
 os.environ["MINIMAX_GROUP_ID"] = minimax_group_id
 
-render_latex = config.get("render_latex", True)
-
-if render_latex:
+if render_latex := config.get("render_latex", True):
     os.environ["RENDER_LATEX"] = "yes"
 else:
     os.environ["RENDER_LATEX"] = "no"
 
 usage_limit = os.environ.get("USAGE_LIMIT", config.get("usage_limit", 120))
 
-## 多账户机制
-multi_api_key = config.get("multi_api_key", False) # 是否开启多账户机制
-if multi_api_key:
+if multi_api_key := config.get("multi_api_key", False):
     api_key_list = config.get("api_key_list", [])
     if len(api_key_list) == 0:
         logging.error("多账号模式已开启，但api_key_list为空，请检查config.json")
@@ -166,7 +162,7 @@ def retrieve_proxy(proxy=None):
 
 ## 处理advance docs
 advance_docs = defaultdict(lambda: defaultdict(dict))
-advance_docs.update(config.get("advance_docs", {}))
+advance_docs |= config.get("advance_docs", {})
 def update_doc_config(two_column_pdf):
     global advance_docs
     advance_docs["pdf"]["two_column"] = two_column_pdf
@@ -177,10 +173,7 @@ def update_doc_config(two_column_pdf):
 server_name = config.get("server_name", None)
 server_port = config.get("server_port", None)
 if server_name is None:
-    if dockerflag:
-        server_name = "0.0.0.0"
-    else:
-        server_name = "127.0.0.1"
+    server_name = "0.0.0.0" if dockerflag else "127.0.0.1"
 if server_port is None:
     if dockerflag:
         server_port = 7860
